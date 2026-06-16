@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamSENA — Plataforma de Evaluaciones</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e0e0e0;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px}
+.logo{font-size:16px;font-weight:700;color:#1a1a1a;display:flex;align-items:center;gap:8px}
+.logo-badge{background:#39a900;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px}
+.tab-row{display:flex;gap:6px;flex-wrap:wrap}
+.tab{padding:6px 16px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:transparent;color:#666;transition:all .2s;font-family:inherit}
+.tab.active{background:#39a900;color:#fff;border-color:#39a900}
+.tab:hover:not(.active){background:#f0f0f0}
+.main{padding:24px 20px;max-width:880px;margin:0 auto}
+.section-title{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:18px 22px;margin-bottom:16px}
+label{font-size:12px;color:#666;display:block;margin-bottom:4px;font-weight:600}
+input,select,textarea{width:100%;font-size:13px;padding:8px 11px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#1a1a1a;outline:none;font-family:inherit;transition:border .2s}
+input:focus,select:focus,textarea:focus{border-color:#39a900}
+textarea{resize:vertical;min-height:64px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.col{flex:1;min-width:130px}
+.btn{padding:8px 18px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#1a1a1a;font-family:inherit;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:#f0f0f0}
+.btn-primary{background:#39a900;color:#fff;border-color:#39a900}
+.btn-primary:hover{background:#2d8500}
+.btn-danger{background:#fff0f0;color:#c0392b;border-color:#f5c6c6}
+.btn-danger:hover{background:#ffe0e0}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid #39a900;color:#39a900}
+.btn-outline:hover{background:#f0fde8}
+.btn-ai{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;font-weight:600}
+.btn-ai:hover{background:#ddd6fe}
+.tipo-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tipo-btn{padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#666;transition:all .2s;font-family:inherit}
+.tipo-btn.sel{background:#e8f5e9;color:#1b5e20;border-color:#39a900;font-weight:700}
+.q-list{display:flex;flex-direction:column;gap:8px}
+.q-item{background:#f8f9fa;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border:1px solid #eee}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-right:6px}
+.badge-mc{background:#e3f2fd;color:#0d47a1}
+.badge-vf{background:#e8f5e9;color:#1b5e20}
+.badge-open{background:#fff8e1;color:#e65100}
+.badge-complete{background:#f3e5f5;color:#4a148c}
+.badge-tema{background:#ede9fe;color:#5b21b6}
+.opts-editor{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.opt-edit-row{display:flex;gap:8px;align-items:center}
+.opt-edit-row input{flex:1}
+.correct-mark{width:24px;height:24px;border-radius:50%;border:1.5px solid #ccc;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;flex-shrink:0;transition:all .2s;background:#fff}
+.correct-mark.marked{background:#39a900;color:#fff;border-color:#39a900}
+.exam-list{display:flex;flex-direction:column;gap:8px}
+.exam-card{background:#f8f9fa;border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #eee;flex-wrap:wrap}
+.divider{height:1px;background:#eee;margin:16px 0}
+.tema-row{display:flex;gap:10px;align-items:center;background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap}
+.tema-row .tema-name{flex:1;font-weight:700;font-size:13px;min-width:140px}
+.tema-row .tema-count{font-size:12px;color:#888;background:#fff;border:1px solid #ddd;border-radius:6px;padding:2px 8px}
+.config-row{display:flex;gap:10px;align-items:center;background:#f8f9fa;border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:8px;flex-wrap:wrap}
+.config-row select{flex:1;min-width:150px}
+.config-row input{max-width:90px}
+.link-box{background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:10px 14px;font-size:12px;color:#1b5e20;word-break:break-all;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* STUDENT */
+.exam-header{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 20px}
+.student-info-bar{background:#e8f5e9;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;border:1px solid #c8e6c9}
+.student-info-bar .info-chip{display:flex;flex-direction:column}
+.student-info-bar .info-label{font-size:10px;color:#2e7d32;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.student-info-bar .info-value{font-size:13px;font-weight:600;color:#1b5e20}
+.timer-box{background:#e8f5e9;border-radius:8px;padding:6px 16px;display:flex;align-items:center;gap:8px;font-size:20px;font-weight:700;color:#1b5e20;border:1px solid #c8e6c9}
+.timer-box.warning{background:#fff8e1;color:#e65100;border-color:#ffe082}
+.timer-box.danger{background:#ffebee;color:#c62828;border-color:#ffcdd2}
+.progress-bg{height:5px;background:#e0e0e0;border-radius:3px;margin:10px 0 6px}
+.progress-fill{height:5px;background:#39a900;border-radius:3px;transition:width .4s}
+.q-nav-dots{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 2px}
+.q-dot{width:22px;height:22px;border-radius:50%;border:1.5px solid #ccc;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;color:#999;transition:all .2s;font-weight:600}
+.q-dot.answered{background:#39a900;border-color:#39a900;color:#fff}
+.q-dot.current{border-color:#39a900;color:#39a900;font-weight:700}
+.q-dot.shuffled{background:#fff3cd;border-color:#ffc107;color:#856404}
+.q-text{font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:16px;line-height:1.6}
+.opt-list{display:flex;flex-direction:column;gap:8px}
+.opt{padding:11px 16px;border-radius:8px;border:1.5px solid #e0e0e0;font-size:13px;color:#1a1a1a;cursor:pointer;background:#fff;transition:all .2s;line-height:1.4}
+.opt:hover{border-color:#39a900;background:#f0fde8}
+.opt.selected{border-color:#39a900;background:#e8f5e9;color:#1b5e20;font-weight:600}
+.nav-row{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:20px}
+.tab-alert{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:12px;color:#856404;margin:0 20px 10px;display:none;align-items:center;gap:8px}
+.tab-alert.show{display:flex}
+
+/* RESULT */
+.result-box{text-align:center;padding:32px 20px}
+.result-score{font-size:56px;font-weight:700}
+.result-label{font-size:16px;color:#555;margin-top:6px}
+.review-item{padding:8px 0;border-bottom:1px solid #eee;font-size:12px;text-align:left;display:flex;align-items:flex-start;gap:8px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+.modal{background:#fff;border-radius:14px;padding:28px;max-width:420px;width:100%;text-align:center}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:10px}
+.modal p{font-size:13px;color:#666;line-height:1.6;margin-bottom:18px}
+.modal-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* PIN */
+.pin-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#1b5e20,#2d8500);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+.pin-box{background:#fff;border-radius:16px;padding:36px 32px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.pin-box h1{font-size:22px;font-weight:700;margin-bottom:4px;color:#1a1a1a}
+.pin-box p{font-size:13px;color:#888;margin-bottom:20px;line-height:1.5}
+.pin-input{text-align:center;font-size:24px;letter-spacing:10px;font-weight:700;border:2px solid #ddd;border-radius:10px;padding:12px}
+.pin-input:focus{border-color:#39a900}
+
+/* AI PANEL */
+.ai-q-item{background:#fff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.ai-q-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.ai-q-text{font-size:13px;font-weight:600;color:#1a1a1a;flex:1;line-height:1.4}
+.ai-opt{font-size:12px;color:#555;padding:3px 0;display:flex;align-items:center;gap:6px}
+.ai-opt.correct-opt{color:#1b5e20;font-weight:700}
+.drop-zone{border:2px dashed #c4b5fd;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#faf5ff;transition:all .2s;margin-bottom:12px}
+.drop-zone:hover,.drop-zone.drag-over{background:#ede9fe;border-color:#7c3aed}
+.drop-zone-icon{font-size:32px;margin-bottom:8px}
+.drop-zone-text{font-size:13px;color:#7c3aed;font-weight:600}
+.drop-zone-sub{font-size:11px;color:#9ca3af;margin-top:4px}
+.ai-generating{display:flex;flex-direction:column;align-items:center;padding:24px;color:#7c3aed;font-size:13px;gap:10px}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid #e9d5ff;border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite}
+.spinner-green{border:3px solid #e0e0e0;border-top-color:#39a900}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RESULTS TABLE */
+.results-table{width:100%;border-collapse:collapse;font-size:12px}
+.results-table th{text-align:left;padding:8px 10px;background:#f5f5f0;border-bottom:1px solid #e0e0e0;font-weight:700;color:#555}
+.results-table td{padding:8px 10px;border-bottom:1px solid #eee;color:#1a1a1a}
+.results-table tr:hover td{background:#f8f9fa}
+
+.loading{text-align:center;padding:40px;color:#888;font-size:14px}
+.hidden{display:none!important}
+.center-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+</style>
+</head>
+<body>
+
+<!-- ===================== PIN ADMIN (solo si NO hay ?examen= en la URL) ===================== -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div style="width:56px;height:56px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px">🎓</div>
+    <h1>ExamSENA</h1>
+    <p>Plataforma de Evaluaciones en Línea<br>Centro Nacional Colombo Alemán</p>
+    <div>
+      <label style="text-align:left;display:block;margin-bottom:6px">PIN de administrador</label>
+      <input class="pin-input" type="password" id="pin-input" maxlength="6" placeholder="••••••" oninput="checkPin()">
+      <div style="margin-top:8px;font-size:12px;color:#e53935;min-height:16px" id="pin-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TOPBAR (admin) ===================== -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="logo">ExamSENA <span class="logo-badge">SENA</span></div>
+  <div class="tab-row">
+    <button class="tab active" onclick="showView('temas')" id="tab-temas">&#128218; Temas y Banco</button>
+    <button class="tab" onclick="showView('ai')" id="tab-ai">&#10024; Generar con IA</button>
+    <button class="tab" onclick="showView('armar')" id="tab-armar">&#129513; Armar examen</button>
+    <button class="tab" onclick="showView('results')" id="tab-results">&#128202; Resultados</button>
+  </div>
+</div>
+
+<!-- ===================== VISTA: TEMAS Y BANCO MANUAL ===================== -->
+<div id="view-temas" class="main" style="display:none">
+  <div class="section-title">&#128218; Temas</div>
+  <div class="card">
+    <div class="row">
+      <div class="col"><label>Nuevo tema</label><input id="nuevo-tema" type="text" placeholder="Ej: Circuitos RC, Metrología, Termodinámica..."></div>
+      <div class="col" style="max-width:140px;display:flex;align-items:flex-end"><button class="btn btn-primary" style="width:100%;justify-content:center" onclick="crearTema()">+ Crear tema</button></div>
+    </div>
+  </div>
+  <div id="temas-list"></div>
+
+  <div class="divider"></div>
+  <div class="section-title">&#9999; Agregar pregunta manual al banco</div>
+  <div class="card">
+    <label>Tema</label>
+    <select id="manual-tema" style="margin-bottom:10px"><option value="">-- Selecciona un tema --</option></select>
+    <div class="tipo-row">
+      <button class="tipo-btn sel" onclick="setTipo('mc',this)">Opción múltiple</button>
+      <button class="tipo-btn" onclick="setTipo('vf',this)">Verdadero / Falso</button>
+      <button class="tipo-btn" onclick="setTipo('open',this)">Respuesta abierta</button>
+      <button class="tipo-btn" onclick="setTipo('complete',this)">Completar espacio</button>
+    </div>
+    <label>Enunciado</label>
+    <textarea id="q-text" placeholder="Escribe la pregunta..." style="margin-bottom:10px"></textarea>
+    <div id="mc-editor">
+      <label>Opciones — marca &#10003; la correcta</label>
+      <div class="opts-editor" id="opts-container">
+        <div class="opt-edit-row"><div class="correct-mark marked" onclick="markCorrect(this)">&#10003;</div><input type="text" placeholder="Opción A"></div>
+        <div class="opt-edit-row"><div class="correct-mark" onclick="markCorrect(this)"></div><input type="text" placeholder="Opción B"></div>
+        <div class="opt-edit-row"><div class="correct-mark" onclick="markCorrect(this)"></div><input type="text" placeholder="Opción C"></div>
+        <div class="opt-edit-row"><div class="correct-mark" onclick="markCorrect(this)"></div><input type="text" placeholder="Opción D"></div>
+      </div>
+      <button class="btn btn-sm" style="margin-top:8px" onclick="addOpt()">+ Opción</button>
+    </div>
+    <div id="vf-editor" class="hidden">
+      <label>Respuesta correcta</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="tipo-btn sel" id="vf-v" onclick="setVF('V')">Verdadero</button>
+        <button class="tipo-btn" id="vf-f" onclick="setVF('F')">Falso</button>
+      </div>
+    </div>
+    <div id="open-editor" class="hidden">
+      <label>Respuesta de referencia</label>
+      <textarea id="open-answer" placeholder="Respuesta esperada..."></textarea>
+    </div>
+    <div id="complete-editor" class="hidden">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">&#8505; Usa ___ en el enunciado para el espacio en blanco</div>
+      <label>Respuesta correcta</label>
+      <input id="complete-answer" type="text" placeholder="Palabra o frase correcta">
+    </div>
+    <div style="margin-top:16px"><button class="btn btn-primary" onclick="addQuestionManual()">+ Agregar al banco</button></div>
+  </div>
+</div>
+
+<!-- ===================== VISTA: GENERAR CON IA ===================== -->
+<div id="view-ai" class="main" style="display:none">
+  <div class="section-title">&#10024; Generar preguntas con IA y agregarlas a un tema</div>
+  <div class="card">
+    <div class="row" style="margin-bottom:14px">
+      <div class="col">
+        <div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;font-size:12px;color:#5b21b6">
+          &#10024; Sube un documento que ya contenga preguntas (banco de preguntas, examen anterior, taller, etc.). La IA <b>extraerá las preguntas existentes</b>, detectará el/los temas y las organizará automáticamente en el banco — no inventa preguntas nuevas.
+        </div>
+      </div>
+    </div>
+    <label>Sube el documento (PDF o Word .docx)</label>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+      <div class="drop-zone-icon">📄</div>
+      <div class="drop-zone-text" id="drop-text">Haz clic o arrastra el documento aquí</div>
+      <div class="drop-zone-sub">PDF o Word (.docx) — máx. 10 MB</div>
+    </div>
+    <input type="file" id="file-input" accept=".pdf,.docx" style="display:none" onchange="fileSelected(event)">
+    <button class="btn btn-ai" id="ai-generate-btn" onclick="generateWithAI()" disabled>&#10024; Extraer y organizar preguntas</button>
+  </div>
+
+  <div id="ai-generating" class="hidden">
+    <div class="ai-generating"><div class="spinner"></div>La IA está leyendo el documento, extrayendo las preguntas y clasificándolas por tema...<br><span style="font-size:11px;color:#9ca3af">Esto puede tomar 15–40 segundos</span></div>
+  </div>
+
+  <div id="ai-results" class="hidden">
+    <div class="section-title">&#128196; Preguntas extraídas — organizadas por tema</div>
+    <div id="ai-q-list"></div>
+
+    <div class="divider"></div>
+    <div class="section-title" style="font-size:14px">&#9889; Opción A — Crear el examen ya armado con estas preguntas</div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <div class="col" style="flex:2"><label>Título del examen</label><input id="direct-titulo" type="text" placeholder="Ej: Evaluación Circuitos RC — Semana 5"></div>
+        <div class="col" style="max-width:110px"><label>Tiempo (min)</label><input id="direct-tiempo" type="number" value="30" min="1" max="300"></div>
+        <div class="col" style="max-width:130px"><label>Puntaje mínimo (%)</label><input id="direct-pass" type="number" value="60" min="0" max="100"></div>
+      </div>
+      <button class="btn btn-primary" onclick="crearExamenDirecto()">&#9889; Crear examen y obtener link ahora</button>
+      <div id="direct-link-box" class="link-box hidden" style="margin-top:12px"></div>
+    </div>
+
+    <div class="section-title" style="font-size:14px;margin-top:14px">&#128218; Opción B — Solo agregar al banco de preguntas (para usarlas después en cualquier examen)</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveAiToBanco()">&#128190; Agregar al banco</button>
+      <button class="btn btn-outline" onclick="generateWithAI()">&#8635; Reintentar extracción</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== VISTA: ARMAR EXAMEN ===================== -->
+<div id="view-armar" class="main" style="display:none">
+  <div class="section-title">&#129513; Armar nuevo examen</div>
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div class="col" style="flex:2"><label>Título del examen</label><input id="armar-titulo" type="text" placeholder="Ej: Evaluación Final — Física II"></div>
+      <div class="col" style="max-width:110px"><label>Tiempo (min) por aprendiz</label><input id="armar-tiempo" type="number" value="30" min="1" max="300"></div>
+      <div class="col" style="max-width:130px"><label>Puntaje mínimo (%)</label><input id="armar-pass" type="number" value="60" min="0" max="100"></div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <div class="col" style="max-width:260px">
+        <label>Link disponible por (minutos desde ahora)</label>
+        <input id="armar-disponible" type="number" value="30" min="1" max="1440">
+        <div style="font-size:11px;color:#888;margin-top:4px">Pasado este tiempo, el link dejará de funcionar para cualquiera que lo abra.</div>
+      </div>
+    </div>
+    <label>Temas a incluir y cantidad de preguntas de cada uno</label>
+    <div id="armar-temas-list" style="margin-top:8px"></div>
+    <button class="btn btn-sm" style="margin-top:6px" onclick="addArmarTemaRow()">+ Agregar tema al examen</button>
+    <div class="divider"></div>
+    <div id="armar-total" style="font-size:13px;color:#555;margin-bottom:10px"></div>
+    <button class="btn btn-primary" onclick="armarExamen()">&#9881; Generar examen y obtener link</button>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-title">&#128279; Exámenes armados</div>
+  <div class="exam-list" id="armados-list"></div>
+</div>
+
+<!-- ===================== VISTA: RESULTADOS ===================== -->
+<div id="view-results" class="main" style="display:none">
+  <div class="section-title">&#128202; Resultados de exámenes</div>
+  <div class="card">
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px"><label>Filtrar por examen</label>
+        <select id="results-filter" onchange="loadResults()"><option value="">Todos los exámenes</option></select>
+      </div>
+      <button class="btn btn-outline" onclick="loadResults()">&#8635; Actualizar</button>
+      <button class="btn btn-danger" id="btn-eliminar-sel" onclick="eliminarSeleccionados()" disabled>&#128465; Eliminar seleccionados (<span id="sel-count">0</span>)</button>
+      <button class="btn btn-danger btn-sm" onclick="eliminarTodosFiltrados()">&#128465; Eliminar todos los de este filtro</button>
+    </div>
+  </div>
+  <div id="results-loading" class="loading hidden"><div class="spinner spinner-green"></div><br>Cargando...</div>
+  <div id="results-table-container"></div>
+</div>
+
+<!-- MODAL DETALLE RESPUESTAS -->
+<div class="modal-overlay hidden" id="modal-detalle">
+  <div class="modal" style="max-width:600px;max-height:85vh;overflow:auto;text-align:left">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h2 style="margin:0" id="detalle-nombre"></h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-primary" onclick="descargarInformePDF(detalleIndexActual)">&#128190; Descargar PDF</button>
+        <button class="btn btn-sm" onclick="document.getElementById('modal-detalle').classList.add('hidden')">✕ Cerrar</button>
+      </div>
+    </div>
+    <div id="detalle-meta" style="font-size:12px;color:#888;margin-bottom:14px"></div>
+    <div id="detalle-respuestas"></div>
+  </div>
+</div>
+
+<!-- ===================== VISTA: APRENDIZ (vía link ?examen=ID) ===================== -->
+<div id="view-student" style="display:none">
+
+  <!-- formulario de ingreso -->
+  <div class="center-screen" id="student-pick">
+    <div class="card" style="max-width:440px;width:100%">
+      <div class="section-title">&#128100; <span id="student-exam-title">Ingresar al examen</span></div>
+      <div id="student-exam-meta" style="font-size:12px;color:#888;margin-bottom:14px"></div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="col"><label>Nombre completo</label><input id="student-name" type="text" placeholder="Nombres y apellidos completos"></div>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="col"><label>Número de documento</label><input id="student-doc" type="text" placeholder="Cédula o TI"></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label>Programa de formación</label>
+        <select id="student-programa">
+          <option value="">-- Selecciona tu programa --</option>
+          <option>Mantenimiento Electromecánico Industrial</option>
+          <option>Mecánica de Maquinaria Industrial</option>
+          <option>Gestión de la Producción Industrial</option>
+          <option>Producción de Componentes Mecánicos con Máquinas CNC</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="startExam()">&#9654; Comenzar examen</button>
+      <div id="student-loading" style="font-size:12px;color:#888;margin-top:10px;text-align:center"></div>
+    </div>
+  </div>
+
+  <!-- examen en curso -->
+  <div id="student-exam" class="hidden">
+    <div class="exam-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:6px" id="exam-title-display"></div>
+          <div class="student-info-bar" id="student-info-bar">
+            <div class="info-chip"><span class="info-label">Aprendiz</span><span class="info-value" id="sib-nombre"></span></div>
+            <div class="info-chip"><span class="info-label">Documento</span><span class="info-value" id="sib-doc"></span></div>
+            <div class="info-chip"><span class="info-label">Programa</span><span class="info-value" id="sib-programa"></span></div>
+          </div>
+        </div>
+        <div class="timer-box" id="timer-box">&#9201; <span id="timer-display">00:00</span></div>
+      </div>
+      <div class="progress-bg"><div class="progress-fill" id="progress-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#888;margin-bottom:4px">
+        <span id="q-progress">Pregunta 1 de 1</span>
+        <span id="tab-counter" style="color:#e65100;font-weight:600"></span>
+      </div>
+      <div class="q-nav-dots" id="q-nav-dots"></div>
+    </div>
+
+    <div class="tab-alert" id="tab-alert">&#9888; Saliste de esta ventana — la pregunta fue actualizada</div>
+
+    <div class="main" id="question-area" style="padding-top:16px"></div>
+  </div>
+
+  <!-- resultado -->
+  <div id="student-result" class="hidden">
+    <div class="main">
+      <div class="card result-box">
+        <div class="result-score" id="result-score">0%</div>
+        <div class="result-label" id="result-label"></div>
+        <div style="font-size:13px;color:#888;margin-top:6px" id="result-detail"></div>
+        <div style="margin-top:10px;padding:10px 16px;background:#f8f9fa;border-radius:8px;font-size:12px;color:#555;text-align:left" id="result-student-info"></div>
+        <div class="divider"></div>
+        <div id="result-review"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- examen no encontrado -->
+  <div id="student-notfound" class="hidden center-screen">
+    <div class="card" style="max-width:400px;text-align:center">
+      <div style="font-size:40px;margin-bottom:10px">&#10060;</div>
+      <h2 style="margin-bottom:8px">Examen no encontrado</h2>
+      <p style="font-size:13px;color:#888">El link no es válido o el examen fue eliminado. Verifica con tu instructor.</p>
+    </div>
+  </div>
+
+  <!-- link expirado -->
+  <div id="student-expired" class="hidden center-screen">
+    <div class="card" style="max-width:420px;text-align:center">
+      <div style="font-size:40px;margin-bottom:10px">&#9201;</div>
+      <h2 style="margin-bottom:8px;color:#c62828">Este link ya fue desactivado</h2>
+      <p style="font-size:13px;color:#666;line-height:1.6">El tiempo de disponibilidad para presentar este examen ha finalizado.<br><br>Comunícate con el instructor <b>Aramis Vitola</b> para más información.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FINALIZAR -->
+<div class="modal-overlay hidden" id="modal-finish">
+  <div class="modal">
+    <div style="font-size:36px;margin-bottom:10px">&#10067;</div>
+    <h2>¿Finalizar el examen?</h2>
+    <p>Una vez enviado no podrás modificar tus respuestas.<br>Preguntas sin responder: <strong id="modal-unanswered">0</strong></p>
+    <div class="modal-btns">
+      <button class="btn" onclick="document.getElementById('modal-finish').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSubmit()">Sí, enviar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://hthphtnkbffpnanfgqpo.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0aHBodG5rYmZmcG5hbmZncXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTExNDAsImV4cCI6MjA5Njc4NzE0MH0.4w-wx4oJAME97OkCHGk2wEHkVcLuzdSMr9A0oDk6OYE';
+const EDGE_FUNCTION_URL='https://hthphtnkbffpnanfgqpo.supabase.co/functions/v1/generar-preguntas';
+const ADMIN_PIN='1234';
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentTipo='mc',vfAnswer='V',temasCache=[],resultadosCache=[];
+let aiFile=null,aiFileText='',aiTipos=['mc','vf'],aiDificultad='basico',aiGeneratedQs=[];
+
+// ===== ENTRY POINT =====
+const urlParams=new URLSearchParams(window.location.search);
+const examenId=urlParams.get('examen');
+
+window.addEventListener('DOMContentLoaded',()=>{
+  if(examenId){
+    document.getElementById('pin-overlay').style.display='none';
+    document.getElementById('view-student').style.display='block';
+    loadStudentExam();
+  }
+});
+
+// ===== PIN =====
+function checkPin(){
+  const v=document.getElementById('pin-input').value;
+  if(v===ADMIN_PIN){
+    document.getElementById('pin-overlay').style.display='none';
+    document.getElementById('topbar').style.display='flex';
+    showView('temas');
+    loadTemas();
+  } else if(v.length>=4){
+    document.getElementById('pin-error').textContent='PIN incorrecto';
+    document.getElementById('pin-input').value='';
+  }
+}
+
+// ===== VISTAS ADMIN =====
+function showView(v){
+  ['temas','ai','armar','results'].forEach(x=>document.getElementById('view-'+x).style.display='none');
+  document.getElementById('view-'+v).style.display='block';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+v).classList.add('active');
+  if(v==='results')loadResults();
+  if(v==='armar')loadArmados();
+  if(v==='ai')populateTemaSelects();
+}
+
+// ===== TEMAS =====
+async function loadTemas(){
+  const{data}=await db.from('temas').select('id,nombre').order('nombre');
+  temasCache=data||[];
+  const list=document.getElementById('temas-list');
+  list.innerHTML='';
+  for(const t of temasCache){
+    const{count}=await db.from('banco_preguntas').select('id',{count:'exact',head:true}).eq('tema_id',t.id);
+    const div=document.createElement('div');div.className='tema-row';
+    div.innerHTML=`<span class="tema-name">${t.nombre}</span><span class="tema-count">${count||0} preguntas</span><button class="btn btn-danger btn-sm" onclick="deleteTema('${t.id}')">&#128465;</button>`;
+    list.appendChild(div);
+  }
+  populateTemaSelects();
+}
+function populateTemaSelects(){
+  const manual=document.getElementById('manual-tema');
+  if(manual){
+    const cur=manual.value;
+    manual.innerHTML='<option value="">-- Selecciona un tema --</option>';
+    temasCache.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.nombre;manual.appendChild(o);});
+    manual.value=cur;
+  }
+}
+async function crearTema(){
+  const nombre=document.getElementById('nuevo-tema').value.trim();
+  if(!nombre){alert('Escribe el nombre del tema.');return;}
+  const{error}=await db.from('temas').insert({nombre});
+  if(error){alert('Error: '+error.message);return;}
+  document.getElementById('nuevo-tema').value='';
+  loadTemas();
+}
+async function deleteTema(id){
+  if(!confirm('¿Eliminar este tema y todas sus preguntas del banco?'))return;
+  await db.from('banco_preguntas').delete().eq('tema_id',id);
+  await db.from('temas').delete().eq('id',id);
+  loadTemas();
+}
+
+// ===== AGREGAR PREGUNTA MANUAL AL BANCO =====
+function setTipo(t,btn){
+  currentTipo=t;
+  document.querySelectorAll('#view-temas .tipo-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  ['mc','vf','open','complete'].forEach(x=>document.getElementById(x+'-editor').classList.toggle('hidden',x!==t));
+}
+function setVF(v){vfAnswer=v;document.getElementById('vf-v').classList.toggle('sel',v==='V');document.getElementById('vf-f').classList.toggle('sel',v==='F');}
+function markCorrect(el){document.querySelectorAll('#opts-container .correct-mark').forEach(m=>{m.classList.remove('marked');m.textContent='';});el.classList.add('marked');el.textContent='✓';}
+function addOpt(){
+  const c=document.getElementById('opts-container');
+  const letters='ABCDEFGHIJKLMNOP';
+  const row=document.createElement('div');row.className='opt-edit-row';
+  row.innerHTML=`<div class="correct-mark" onclick="markCorrect(this)"></div><input type="text" placeholder="Opción ${letters[c.children.length]||''}">`;
+  c.appendChild(row);
+}
+function getCorrectIndex(){const m=document.querySelectorAll('#opts-container .correct-mark');for(let i=0;i<m.length;i++)if(m[i].classList.contains('marked'))return i;return 0;}
+
+async function addQuestionManual(){
+  const temaId=document.getElementById('manual-tema').value;
+  if(!temaId){alert('Selecciona un tema.');return;}
+  const text=document.getElementById('q-text').value.trim();
+  if(!text){alert('Escribe el enunciado.');return;}
+  let row={tema_id:temaId,tipo:currentTipo,texto:text};
+  if(currentTipo==='mc'){
+    const rows=document.querySelectorAll('#opts-container .opt-edit-row');
+    const opts=[...rows].map(r=>r.querySelector('input').value.trim()).filter(Boolean);
+    if(opts.length<2){alert('Agrega al menos 2 opciones.');return;}
+    row.opts=opts;row.correcto=Math.min(getCorrectIndex(),opts.length-1);
+  }else if(currentTipo==='vf'){row.opts=['Verdadero','Falso'];row.correcto=vfAnswer==='V'?0:1;}
+  else if(currentTipo==='open'){row.respuesta=document.getElementById('open-answer').value.trim();}
+  else if(currentTipo==='complete'){row.respuesta=document.getElementById('complete-answer').value.trim();}
+  const{error}=await db.from('banco_preguntas').insert(row);
+  if(error){alert('Error: '+error.message);return;}
+  document.getElementById('q-text').value='';
+  document.getElementById('open-answer').value='';
+  document.getElementById('complete-answer').value='';
+  document.querySelectorAll('#opts-container .opt-edit-row input').forEach(i=>i.value='');
+  alert('✅ Pregunta agregada al banco.');
+  loadTemas();
+}
+
+// ===== IA =====
+function dragOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');}
+function dragLeave(){document.getElementById('drop-zone').classList.remove('drag-over');}
+function dropFile(e){e.preventDefault();dragLeave();const f=e.dataTransfer.files[0];if(f)processFile(f);}
+function fileSelected(e){const f=e.target.files[0];if(f)processFile(f);}
+
+async function processFile(file){
+  if(file.size>10*1024*1024){alert('El archivo supera los 10 MB.');return;}
+  aiFile=file;
+  document.getElementById('drop-text').textContent='📄 '+file.name+' ('+Math.round(file.size/1024)+' KB)';
+  document.getElementById('drop-zone').style.borderColor='#39a900';
+  document.getElementById('drop-zone').style.background='#f0fde8';
+  if(file.name.endsWith('.docx')){
+    const ab=await file.arrayBuffer();
+    const result=await mammoth.extractRawText({arrayBuffer:ab});
+    aiFileText=result.value;
+  } else { aiFileText='__PDF__'; }
+  document.getElementById('ai-generate-btn').disabled=false;
+}
+
+async function generateWithAI(){
+  if(!aiFile){alert('Sube un documento.');return;}
+  document.getElementById('ai-generating').classList.remove('hidden');
+  document.getElementById('ai-results').classList.add('hidden');
+  let messages;
+  if(aiFileText==='__PDF__'){
+    const ab=await aiFile.arrayBuffer();
+    const b64=btoa(String.fromCharCode(...new Uint8Array(ab)));
+    messages=[{role:'user',content:[
+      {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+      {type:'text',text:buildExtractPrompt()}
+    ]}];
+  } else {
+    messages=[{role:'user',content:buildExtractPrompt()+'\n\nCONTENIDO DEL DOCUMENTO:\n'+aiFileText.substring(0,15000)}];
+  }
+  try{
+    const resp=await fetch(EDGE_FUNCTION_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8000,messages})
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||'';
+    const clean=text.replace(/```json|```/g,'').trim();
+    const start=clean.indexOf('[');const end=clean.lastIndexOf(']');
+    if(start===-1||end===-1)throw new Error('La IA no devolvió un formato válido. Verifica que el documento contenga preguntas reconocibles.');
+    aiGeneratedQs=JSON.parse(clean.substring(start,end+1));
+    if(aiGeneratedQs.length===0)throw new Error('No se detectaron preguntas en el documento.');
+    renderAiResults();
+  }catch(err){
+    alert('Error: '+err.message);
+  }
+  document.getElementById('ai-generating').classList.add('hidden');
+}
+
+function buildExtractPrompt(){
+  return `Eres un asistente que organiza bancos de preguntas educativos para SENA (formación técnica industrial).
+
+Analiza el documento adjunto, que contiene preguntas de examen YA EXISTENTES (no inventes preguntas nuevas). Tu tarea:
+
+1. EXTRAE todas las preguntas que encuentres tal como están (enunciado y opciones originales).
+2. Para cada pregunta, identifica su TIPO: "mc" (opción múltiple), "vf" (verdadero/falso), "open" (respuesta abierta/desarrollo), o "complete" (completar espacio en blanco).
+3. Si la pregunta tiene opciones y se indica o se puede inferir cuál es la correcta, incluye el índice correcto. Si no es posible determinarlo con certeza para "mc", igual incluye la pregunta con correcto:0 y todas sus opciones (el docente la revisará).
+4. CLASIFICA cada pregunta dentro de un TEMA según su contenido (ej: "Circuitos RC", "Metrología", "Termodinámica", "Seguridad Industrial", etc.). Usa nombres de tema cortos, claros y en español. Si el documento trata de un solo tema, usa un único nombre de tema para todas. Si cubre varios subtemas, agrúpalas por subtema.
+
+Devuelve ÚNICAMENTE un array JSON válido, sin texto adicional, con este formato exacto:
+[
+ {"tema":"Nombre del tema","tipo":"mc","texto":"¿Pregunta?","opts":["A","B","C","D"],"correcto":0},
+ {"tema":"Nombre del tema","tipo":"vf","texto":"Afirmación.","opts":["Verdadero","Falso"],"correcto":0},
+ {"tema":"Nombre del tema","tipo":"open","texto":"¿Pregunta abierta?","respuesta":"Respuesta de referencia si el documento la incluye, si no, deja vacío"},
+ {"tema":"Nombre del tema","tipo":"complete","texto":"La resistencia se mide en ___.","respuesta":"ohmios"}
+]
+
+Reglas:
+- "mc": correcto = índice (0-3) de la opción correcta
+- "vf": correcto = 0 para Verdadero, 1 para Falso
+- No omitas preguntas, extrae TODAS las que encuentres en el documento
+- No traduzcas ni reformules el enunciado, mantenlo como está en el documento (puedes corregir errores ortográficos obvios)`;
+}
+
+function renderAiResults(){
+  document.getElementById('ai-results').classList.remove('hidden');
+  const container=document.getElementById('ai-q-list');container.innerHTML='';
+  const badges={mc:'badge-mc',vf:'badge-vf',open:'badge-open',complete:'badge-complete'};
+  const labels={mc:'Opción múltiple',vf:'V/F',open:'Abierta',complete:'Completar'};
+  // agrupar por tema
+  const grupos={};
+  aiGeneratedQs.forEach((q,i)=>{
+    const tema=q.tema||'General';
+    if(!grupos[tema])grupos[tema]=[];
+    grupos[tema].push(i);
+  });
+  Object.keys(grupos).forEach(tema=>{
+    const header=document.createElement('div');
+    header.style="display:flex;align-items:center;gap:8px;margin:14px 0 8px";
+    header.innerHTML=`<span class="badge badge-tema" style="font-size:12px">&#128218; TEMA</span><input type="text" value="${tema}" data-tema-original="${tema}" class="tema-edit-input" style="font-weight:700;font-size:14px;border:none;background:transparent;padding:2px 4px;flex:1;max-width:300px" onchange="renameTema('${tema}',this.value)"><span style="font-size:12px;color:#888">(${grupos[tema].length} preguntas)</span>`;
+    container.appendChild(header);
+    grupos[tema].forEach(i=>{
+      const q=aiGeneratedQs[i];
+      const div=document.createElement('div');div.className='ai-q-item';
+      let optsHtml='';
+      if((q.tipo==='mc'||q.tipo==='vf')&&q.opts){
+        optsHtml=q.opts.map((o,idx)=>`<div class="ai-opt${idx===q.correcto?' correct-opt':''}">${idx===q.correcto?'✓ ':''}<span>${o}</span></div>`).join('');
+      } else {
+        optsHtml=`<div class="ai-opt" style="color:#888;font-style:italic">Ref: ${q.respuesta||'(sin referencia)'}</div>`;
+      }
+      div.innerHTML=`<div class="ai-q-header"><div><span class="badge ${badges[q.tipo]||'badge-mc'}">${labels[q.tipo]||q.tipo}</span><div class="ai-q-text">${q.texto}</div></div><button class="btn btn-sm btn-danger" onclick="removeAiQ(${i})">&#128465;</button></div><div style="padding-left:4px">${optsHtml}</div>`;
+      container.appendChild(div);
+    });
+  });
+}
+function renameTema(oldName,newName){
+  newName=newName.trim();if(!newName)return;
+  aiGeneratedQs.forEach(q=>{if((q.tema||'General')===oldName)q.tema=newName;});
+}
+function removeAiQ(i){aiGeneratedQs[i]=null;aiGeneratedQs=aiGeneratedQs.filter(q=>q!==null);renderAiResults();}
+
+async function crearExamenDirecto(){
+  const titulo=document.getElementById('direct-titulo').value.trim();
+  const tiempo=parseInt(document.getElementById('direct-tiempo').value)||30;
+  const pass=parseInt(document.getElementById('direct-pass').value)||60;
+  if(!titulo){alert('Escribe el título del examen.');return;}
+  if(aiGeneratedQs.length===0){alert('No hay preguntas para usar.');return;}
+
+  const nombresTemas=[...new Set(aiGeneratedQs.map(q=>q.tema||'General'))];
+  const{data:existentes}=await db.from('temas').select('id,nombre');
+  const mapaTemas={};
+  (existentes||[]).forEach(t=>mapaTemas[t.nombre.toLowerCase().trim()]=t.id);
+
+  const conteoPorTema={};
+  for(const nombre of nombresTemas){
+    const key=nombre.toLowerCase().trim();
+    if(!mapaTemas[key]){
+      const{data,error}=await db.from('temas').insert({nombre}).select().single();
+      if(!error)mapaTemas[key]=data.id;
+      else{
+        const{data:t2}=await db.from('temas').select('id,nombre').ilike('nombre',nombre);
+        if(t2&&t2[0])mapaTemas[key]=t2[0].id;
+      }
+    }
+    conteoPorTema[key]=0;
+  }
+
+  const rows=aiGeneratedQs.map(q=>{
+    const key=(q.tema||'General').toLowerCase().trim();
+    conteoPorTema[key]++;
+    return{
+      tema_id:mapaTemas[key],tipo:q.tipo,texto:q.texto,
+      opts:q.opts||null,correcto:q.correcto!==undefined?q.correcto:null,respuesta:q.respuesta||null
+    };
+  });
+  const{error:errIns}=await db.from('banco_preguntas').insert(rows);
+  if(errIns){alert('Error guardando preguntas: '+errIns.message);return;}
+
+  const config=nombresTemas.map(nombre=>({
+    tema_id:mapaTemas[nombre.toLowerCase().trim()],
+    tema_nombre:nombre,
+    cantidad:conteoPorTema[nombre.toLowerCase().trim()]
+  }));
+
+  const{data:examData,error:errExam}=await db.from('examenes').insert({titulo,tiempo_min:tiempo,puntaje_min:pass,config}).select().single();
+  if(errExam){alert('Error creando examen: '+errExam.message);return;}
+
+  const link=`${window.location.origin}${window.location.pathname}?examen=${examData.id}`;
+  const box=document.getElementById('direct-link-box');
+  box.classList.remove('hidden');
+  box.innerHTML=`<span>✅ Examen creado: <strong>${link}</strong></span><button class="btn btn-sm btn-outline" onclick="copyLink('${link}',this)">Copiar link</button>`;
+  loadTemas();
+}
+
+async function saveAiToBanco(){
+  if(aiGeneratedQs.length===0){alert('No hay preguntas para guardar.');return;}
+  // 1. recolectar nombres de tema únicos
+  const nombresTemas=[...new Set(aiGeneratedQs.map(q=>q.tema||'General'))];
+  // 2. cargar temas existentes
+  const{data:existentes}=await db.from('temas').select('id,nombre');
+  const mapaTemas={};
+  (existentes||[]).forEach(t=>mapaTemas[t.nombre.toLowerCase().trim()]=t.id);
+  // 3. crear los que no existan
+  for(const nombre of nombresTemas){
+    const key=nombre.toLowerCase().trim();
+    if(!mapaTemas[key]){
+      const{data,error}=await db.from('temas').insert({nombre}).select().single();
+      if(error){
+        // puede ya existir por carrera; recargar
+        const{data:t2}=await db.from('temas').select('id,nombre').ilike('nombre',nombre);
+        if(t2&&t2[0])mapaTemas[key]=t2[0].id;
+      } else {
+        mapaTemas[key]=data.id;
+      }
+    }
+  }
+  // 4. insertar preguntas
+  const rows=aiGeneratedQs.map(q=>({
+    tema_id:mapaTemas[(q.tema||'General').toLowerCase().trim()],
+    tipo:q.tipo,
+    texto:q.texto,
+    opts:q.opts||null,
+    correcto:q.correcto!==undefined?q.correcto:null,
+    respuesta:q.respuesta||null
+  }));
+  const{error}=await db.from('banco_preguntas').insert(rows);
+  if(error){alert('Error: '+error.message);return;}
+  alert(`✅ ${rows.length} preguntas agregadas al banco en ${nombresTemas.length} tema(s): ${nombresTemas.join(', ')}`);
+  aiGeneratedQs=[];
+  document.getElementById('ai-results').classList.add('hidden');
+  document.getElementById('drop-text').textContent='Haz clic o arrastra el documento aquí';
+  document.getElementById('drop-zone').style.borderColor='';
+  document.getElementById('drop-zone').style.background='';
+  aiFile=null;aiFileText='';
+  document.getElementById('ai-generate-btn').disabled=true;
+  loadTemas();
+}
+
+// ===== ARMAR EXAMEN =====
+function addArmarTemaRow(){
+  const list=document.getElementById('armar-temas-list');
+  const row=document.createElement('div');row.className='config-row';
+  let opts='<option value="">-- Tema --</option>';
+  temasCache.forEach(t=>opts+=`<option value="${t.id}" data-nombre="${t.nombre}">${t.nombre}</option>`);
+  row.innerHTML=`<select onchange="updateArmarTotal()">${opts}</select><input type="number" min="1" value="5" onchange="updateArmarTotal()"><button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updateArmarTotal()">&#128465;</button>`;
+  list.appendChild(row);
+  updateArmarTotal();
+}
+function updateArmarTotal(){
+  const rows=document.querySelectorAll('#armar-temas-list .config-row');
+  let total=0;
+  rows.forEach(r=>{const n=parseInt(r.querySelector('input').value)||0;total+=n;});
+  document.getElementById('armar-total').textContent=`Total de preguntas en el examen: ${total}`;
+}
+async function armarExamen(){
+  const titulo=document.getElementById('armar-titulo').value.trim();
+  const tiempo=parseInt(document.getElementById('armar-tiempo').value)||30;
+  const pass=parseInt(document.getElementById('armar-pass').value)||60;
+  const disponible=parseInt(document.getElementById('armar-disponible').value)||30;
+  if(!titulo){alert('Escribe el título del examen.');return;}
+  const rows=document.querySelectorAll('#armar-temas-list .config-row');
+  if(rows.length===0){alert('Agrega al menos un tema.');return;}
+  const config=[];
+  for(const r of rows){
+    const sel=r.querySelector('select');const temaId=sel.value;
+    const cantidad=parseInt(r.querySelector('input').value)||0;
+    if(!temaId||cantidad<=0)continue;
+    const{count}=await db.from('banco_preguntas').select('id',{count:'exact',head:true}).eq('tema_id',temaId);
+    if((count||0)<cantidad){alert(`El tema "${sel.options[sel.selectedIndex].text}" solo tiene ${count} preguntas en el banco, pero pediste ${cantidad}.`);return;}
+    config.push({tema_id:temaId,tema_nombre:sel.options[sel.selectedIndex].dataset.nombre,cantidad});
+  }
+  if(config.length===0){alert('Configura al menos un tema válido.');return;}
+  const expiraEn=new Date(Date.now()+disponible*60000).toISOString();
+  const{data,error}=await db.from('examenes').insert({titulo,tiempo_min:tiempo,puntaje_min:pass,config,disponible_min:disponible,expira_en:expiraEn}).select().single();
+  if(error){alert('Error: '+error.message);return;}
+  document.getElementById('armar-titulo').value='';
+  document.getElementById('armar-temas-list').innerHTML='';
+  updateArmarTotal();
+  loadArmados();
+  alert(`✅ Examen creado. El link estará activo por ${disponible} minutos a partir de ahora. Cópialo y compártelo de inmediato con los aprendices.`);
+}
+async function loadArmados(){
+  const{data}=await db.from('examenes').select('id,titulo,tiempo_min,puntaje_min,config,expira_en,disponible_min').order('created_at',{ascending:false});
+  const list=document.getElementById('armados-list');list.innerHTML='';
+  (data||[]).forEach(e=>{
+    const link=`${window.location.origin}${window.location.pathname}?examen=${e.id}`;
+    const temasStr=e.config.map(c=>`${c.tema_nombre} (${c.cantidad})`).join(', ');
+    const total=e.config.reduce((s,c)=>s+c.cantidad,0);
+    const expiraDate=e.expira_en?new Date(e.expira_en):null;
+    const vencido=expiraDate&&expiraDate.getTime()<Date.now();
+    let estadoHtml='';
+    if(expiraDate){
+      const fechaStr=expiraDate.toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
+      if(vencido){
+        estadoHtml=`<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#ffebee;color:#c62828">⛔ Link vencido (expiró: ${fechaStr})</span>`;
+      } else {
+        estadoHtml=`<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#e8f5e9;color:#1b5e20">✓ Activo hasta: ${fechaStr}</span>`;
+      }
+    }
+    const div=document.createElement('div');div.className='exam-card';
+    div.innerHTML=`<div style="flex:1;min-width:200px"><div style="font-size:14px;font-weight:700">${e.titulo}</div><div style="font-size:12px;color:#888;margin-top:2px">${total} preguntas &bull; ${e.tiempo_min} min &bull; Aprueba: ${e.puntaje_min}%</div><div style="margin-top:6px">${estadoHtml}</div><div style="font-size:11px;color:#7c3aed;margin-top:4px">${temasStr}</div><div class="link-box" style="margin-top:8px"><span>${link}</span><button class="btn btn-sm btn-outline" onclick="copyLink('${link}',this)">Copiar link</button></div><button class="btn btn-sm" style="margin-top:6px" onclick="reactivarLink('${e.id}')">&#8635; Reactivar por otros ${e.disponible_min||30} min</button></div><button class="btn btn-danger btn-sm" onclick="deleteExamen('${e.id}')">&#128465;</button>`;
+    list.appendChild(div);
+  });
+}
+async function reactivarLink(id){
+  const{data:ex}=await db.from('examenes').select('disponible_min').eq('id',id).single();
+  const mins=ex?.disponible_min||30;
+  const nuevaExpira=new Date(Date.now()+mins*60000).toISOString();
+  await db.from('examenes').update({expira_en:nuevaExpira}).eq('id',id);
+  loadArmados();
+}
+function copyLink(link,btn){
+  navigator.clipboard.writeText(link);
+  const old=btn.textContent;btn.textContent='✓ Copiado';
+  setTimeout(()=>btn.textContent=old,1500);
+}
+async function deleteExamen(id){
+  if(!confirm('¿Eliminar este examen y sus resultados?'))return;
+  await db.from('resultados').delete().eq('examen_id',id);
+  await db.from('examenes').delete().eq('id',id);
+  loadArmados();
+}
+
+// ===== RESULTADOS =====
+async function loadResults(){
+  document.getElementById('results-loading').classList.remove('hidden');
+  document.getElementById('results-table-container').innerHTML='';
+  const filterVal=document.getElementById('results-filter').value;
+  let query=db.from('resultados').select('id,nombre_aprendiz,puntaje,cambios_pestana,created_at,examen_id,documento,programa,respuestas,examenes(titulo,puntaje_min)').order('created_at',{ascending:false});
+  if(filterVal)query=query.eq('examen_id',filterVal);
+  const{data}=await query;
+  resultadosCache=data||[];
+  document.getElementById('results-loading').classList.add('hidden');
+  const{data:exList}=await db.from('examenes').select('id,titulo');
+  const rf=document.getElementById('results-filter');const curV=rf.value;
+  rf.innerHTML='<option value="">Todos los exámenes</option>';
+  (exList||[]).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.titulo;if(e.id===curV)o.selected=true;rf.appendChild(o);});
+  updateSelCount();
+  if(!data||data.length===0){document.getElementById('results-table-container').innerHTML='<div class="loading" style="padding:30px;color:#888">No hay resultados aún</div>';return;}
+  let html=`<div class="card" style="padding:0;overflow:auto"><table class="results-table"><thead><tr><th><input type="checkbox" onclick="toggleAllSel(this)"></th><th>Aprendiz</th><th>Programa</th><th>Documento</th><th>Examen</th><th>Puntaje</th><th>Estado</th><th>Cambios pestaña</th><th>Fecha</th><th></th></tr></thead><tbody>`;
+  data.forEach((r,i)=>{
+    const min=r.examenes?.puntaje_min||60;const ok=r.puntaje>=min;
+    const fecha=new Date(r.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'});
+    html+=`<tr><td><input type="checkbox" class="sel-result" data-id="${r.id}" onclick="updateSelCount()"></td><td style="font-weight:600">${r.nombre_aprendiz}</td><td style="font-size:11px;color:#555">${r.programa||'—'}</td><td style="color:#888">${r.documento||'—'}</td><td>${r.examenes?.titulo||'—'}</td><td style="font-weight:700;color:${ok?'#39a900':'#e53935'}">${r.puntaje}%</td><td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${ok?'#e8f5e9':'#ffebee'};color:${ok?'#1b5e20':'#c62828'}">${ok?'Aprobado':'No aprobado'}</span></td><td style="text-align:center;color:${r.cambios_pestana>0?'#e65100':'#888'}">${r.cambios_pestana>0?'⚠ '+r.cambios_pestana:'0'}</td><td style="color:#888;font-size:11px">${fecha}</td><td style="display:flex;gap:4px;white-space:nowrap"><button class="btn btn-sm btn-outline" onclick="verDetalle(${i})">Ver</button><button class="btn btn-sm" onclick="descargarInformePDF(${i})">&#128190; PDF</button><button class="btn btn-sm btn-danger" onclick="eliminarUno('${r.id}')">&#128465;</button></td></tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('results-table-container').innerHTML=html;
+}
+
+function updateSelCount(){
+  const checked=document.querySelectorAll('.sel-result:checked');
+  document.getElementById('sel-count').textContent=checked.length;
+  document.getElementById('btn-eliminar-sel').disabled=checked.length===0;
+}
+function toggleAllSel(master){
+  document.querySelectorAll('.sel-result').forEach(cb=>cb.checked=master.checked);
+  updateSelCount();
+}
+async function eliminarUno(id){
+  if(!confirm('¿Eliminar este resultado? Esta acción no se puede deshacer.'))return;
+  await db.from('resultados').delete().eq('id',id);
+  loadResults();
+}
+async function eliminarSeleccionados(){
+  const ids=[...document.querySelectorAll('.sel-result:checked')].map(cb=>cb.dataset.id);
+  if(ids.length===0)return;
+  if(!confirm(`¿Eliminar ${ids.length} resultado(s) seleccionado(s)? Esta acción no se puede deshacer.`))return;
+  await db.from('resultados').delete().in('id',ids);
+  loadResults();
+}
+async function eliminarTodosFiltrados(){
+  const filterVal=document.getElementById('results-filter').value;
+  if(resultadosCache.length===0){alert('No hay resultados para eliminar.');return;}
+  const label=filterVal?document.getElementById('results-filter').selectedOptions[0].textContent:'TODOS los exámenes';
+  if(!confirm(`¿Eliminar TODOS los resultados (${resultadosCache.length}) de "${label}"? Esta acción no se puede deshacer.`))return;
+  if(filterVal){
+    await db.from('resultados').delete().eq('examen_id',filterVal);
+  } else {
+    const ids=resultadosCache.map(r=>r.id);
+    await db.from('resultados').delete().in('id',ids);
+  }
+  loadResults();
+}
+
+let detalleIndexActual=null;
+function verDetalle(i){
+  detalleIndexActual=i;
+  const r=resultadosCache[i];
+  document.getElementById('detalle-nombre').textContent=r.nombre_aprendiz;
+  document.getElementById('detalle-meta').innerHTML=`<b>Documento:</b> ${r.documento||'—'} &nbsp;|&nbsp; <b>Programa:</b> ${r.programa||'—'} &nbsp;|&nbsp; <b>Examen:</b> ${r.examenes?.titulo||'—'} &nbsp;|&nbsp; <b>Puntaje:</b> ${r.puntaje}% &nbsp;|&nbsp; <b>Cambios de pestaña:</b> ${r.cambios_pestana||0}`;
+  const cont=document.getElementById('detalle-respuestas');
+  cont.innerHTML='';
+  (r.respuestas||[]).forEach((resp,idx)=>{
+    let estado,color,bg;
+    if(resp.anulada){estado='Anulada (cambio de pestaña)';color='#856404';bg='#fff3cd';}
+    else if(!resp.auto){estado='Revisión manual';color='#e65100';bg='#fff8e1';}
+    else if(resp.correcto){estado='Correcta';color='#1b5e20';bg='#e8f5e9';}
+    else{estado='Incorrecta';color='#c62828';bg='#ffebee';}
+    cont.innerHTML+=`
+      <div style="border:1px solid #eee;border-radius:8px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <span style="font-size:11px;color:#7c3aed;font-weight:700">${resp.tema||''}</span>
+          <span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${bg};color:${color}">${estado}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">P${idx+1}: ${resp.pregunta}</div>
+        <div style="font-size:12px;color:#555"><b>Respuesta del aprendiz:</b> ${resp.respuesta_dada!==null&&resp.respuesta_dada!==''?resp.respuesta_dada:'<i style="color:#aaa">(sin responder)</i>'}</div>
+        ${resp.respuesta_correcta?`<div style="font-size:12px;color:#1b5e20;margin-top:2px"><b>Respuesta correcta:</b> ${resp.respuesta_correcta}</div>`:''}
+      </div>`;
+  });
+  document.getElementById('modal-detalle').classList.remove('hidden');
+}
+
+function descargarInformePDF(i){
+  const r=resultadosCache[i];
+  if(!r){alert('No se encontró el resultado.');return;}
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'letter'});
+  const pageW=doc.internal.pageSize.getWidth();
+  const margin=50;
+  const maxW=pageW-margin*2;
+  let y=50;
+
+  function checkPageBreak(extra=0){
+    if(y+extra>740){doc.addPage();y=50;}
+  }
+  function addWrapped(text,x,size,bold,color,lineH){
+    doc.setFontSize(size);
+    doc.setFont('helvetica',bold?'bold':'normal');
+    doc.setTextColor(color[0],color[1],color[2]);
+    const lines=doc.splitTextToSize(text,maxW-(x-margin));
+    lines.forEach(line=>{
+      checkPageBreak(lineH);
+      doc.text(line,x,y);
+      y+=lineH;
+    });
+  }
+
+  // ENCABEZADO
+  doc.setFillColor(57,169,0);
+  doc.rect(0,0,pageW,70,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica','bold');
+  doc.text('ExamSENA — Informe de Resultados',margin,32);
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.text('Centro Nacional Colombo Alemán',margin,50);
+  y=95;
+
+  // DATOS DEL APRENDIZ
+  doc.setTextColor(20,20,20);
+  addWrapped(`Aprendiz: ${r.nombre_aprendiz}`,margin,12,true,[20,20,20],16);
+  addWrapped(`Documento: ${r.documento||'—'}`,margin,10,false,[80,80,80],14);
+  addWrapped(`Programa de formación: ${r.programa||'—'}`,margin,10,false,[80,80,80],14);
+  addWrapped(`Examen: ${r.examenes?.titulo||'—'}`,margin,10,false,[80,80,80],14);
+  const fecha=new Date(r.created_at).toLocaleString('es-CO',{dateStyle:'long',timeStyle:'short'});
+  addWrapped(`Fecha de presentación: ${fecha}`,margin,10,false,[80,80,80],14);
+  y+=6;
+
+  // RESUMEN
+  const min=r.examenes?.puntaje_min||60;
+  const ok=r.puntaje>=min;
+  checkPageBreak(40);
+  doc.setFillColor(ok?232:255,ok?245:235,ok?233:235);
+  doc.roundedRect(margin,y,maxW,36,4,4,'F');
+  doc.setFontSize(13);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(ok?27:198,ok?94:40,ok?32:40);
+  doc.text(`Puntaje: ${r.puntaje}%  —  ${ok?'APROBADO':'NO APROBADO'}  (mínimo requerido: ${min}%)`,margin+10,y+23);
+  y+=50;
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(80,80,80);
+  doc.text(`Cambios de pestaña detectados durante el examen: ${r.cambios_pestana||0}`,margin,y);
+  y+=20;
+
+  // LINEA SEPARADORA
+  doc.setDrawColor(220,220,220);
+  doc.line(margin,y,pageW-margin,y);
+  y+=20;
+
+  addWrapped('Detalle de respuestas',margin,13,true,[20,20,20],18);
+  y+=4;
+
+  (r.respuestas||[]).forEach((resp,idx)=>{
+    checkPageBreak(60);
+    let estado='Incorrecta',col=[198,40,40];
+    if(resp.anulada){estado='Anulada (cambio de pestaña)';col=[133,100,4];}
+    else if(!resp.auto){estado='Revisión manual pendiente';col=[230,81,0];}
+    else if(resp.correcto){estado='Correcta';col=[27,94,32];}
+
+    addWrapped(`Pregunta ${idx+1}  [${resp.tema||''}]`,margin,10,true,[90,30,170],13);
+    addWrapped(resp.pregunta,margin,11,false,[20,20,20],14);
+    addWrapped(`Respuesta del aprendiz: ${resp.respuesta_dada!==null&&resp.respuesta_dada!==''?resp.respuesta_dada:'(sin responder)'}`,margin,9.5,false,[80,80,80],13);
+    if(resp.respuesta_correcta){
+      addWrapped(`Respuesta correcta: ${resp.respuesta_correcta}`,margin,9.5,false,[27,94,32],13);
+    }
+    addWrapped(`Estado: ${estado}`,margin,9.5,true,col,13);
+    y+=10;
+    checkPageBreak(2);
+    doc.setDrawColor(238,238,238);
+    doc.line(margin,y-4,pageW-margin,y-4);
+  });
+
+  const nombreArchivo=`Informe_${r.nombre_aprendiz.replace(/[^a-zA-Z0-9]/g,'_')}_${(r.examenes?.titulo||'examen').replace(/[^a-zA-Z0-9]/g,'_')}.pdf`;
+  doc.save(nombreArchivo);
+}
+
+// ===================================================================
+// ===== APRENDIZ — entra por link ?examen=ID =====
+// ===================================================================
+let examConfig=null;       // {id,titulo,tiempo_min,puntaje_min,config}
+let bancoCompleto={};      // tema_id -> [preguntas]
+let usedIds=new Set();     // ids de preguntas ya usadas en el examen actual
+let shuffledQs=[];
+let currentQIndex=0;
+let studentAnswers=[];
+let annulled=[];
+let timerInterval=null;
+let timeLeft=0;
+let tabChangeCount=0;
+let tabAlertTimeout=null;
+let currentStudentData={};
+
+async function loadStudentExam(){
+  document.getElementById('student-loading').textContent='Cargando examen...';
+  const{data,error}=await db.from('examenes').select('id,titulo,tiempo_min,puntaje_min,config,expira_en').eq('id',examenId).single();
+  if(error||!data){
+    document.getElementById('student-pick').classList.add('hidden');
+    document.getElementById('student-notfound').classList.remove('hidden');
+    return;
+  }
+  if(data.expira_en&&new Date(data.expira_en).getTime()<Date.now()){
+    document.getElementById('student-pick').classList.add('hidden');
+    document.getElementById('student-expired').classList.remove('hidden');
+    return;
+  }
+  examConfig=data;
+  const total=data.config.reduce((s,c)=>s+c.cantidad,0);
+  document.getElementById('student-exam-title').textContent=data.titulo;
+  document.getElementById('student-exam-meta').textContent=`${total} preguntas &bull; ${data.tiempo_min} minutos &bull; Aprueba con ${data.puntaje_min}%`.replace('&bull;','•');
+  document.getElementById('student-loading').textContent='';
+  // precargar banco de cada tema
+  for(const c of data.config){
+    const{data:preguntas}=await db.from('banco_preguntas').select('*').eq('tema_id',c.tema_id);
+    bancoCompleto[c.tema_id]=preguntas||[];
+  }
+}
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function prepareQuestion(row){
+  const q={id:row.id,tema_id:row.tema_id,tipo:row.tipo,text:row.texto};
+  if(row.tipo==='mc'||row.tipo==='vf'){
+    const paired=(row.opts||[]).map((o,i)=>({text:o,isCorrect:i===row.correcto}));
+    const sh=shuffle(paired);
+    q.shuffledOpts=sh;q.shuffledCorrect=sh.findIndex(o=>o.isCorrect);
+  } else {
+    q.answer=row.respuesta;
+  }
+  return q;
+}
+
+function startExam(){
+  if(examConfig.expira_en&&new Date(examConfig.expira_en).getTime()<Date.now()){
+    document.getElementById('student-pick').classList.add('hidden');
+    document.getElementById('student-expired').classList.remove('hidden');
+    return;
+  }
+  const name=document.getElementById('student-name').value.trim();
+  const doc=document.getElementById('student-doc').value.trim();
+  const prog=document.getElementById('student-programa').value;
+  if(!name){alert('Ingresa tu nombre completo.');return;}
+  if(!doc){alert('Ingresa tu número de documento.');return;}
+  if(!prog){alert('Selecciona tu programa de formación.');return;}
+  currentStudentData={nombre:name,documento:doc,programa:prog};
+
+  // armar conjunto aleatorio de preguntas según config
+  let pool=[];
+  for(const c of examConfig.config){
+    const disponibles=shuffle(bancoCompleto[c.tema_id]||[]);
+    pool=pool.concat(disponibles.slice(0,c.cantidad));
+  }
+  pool=shuffle(pool); // orden aleatorio general — distinto por aprendiz
+  shuffledQs=pool.map(prepareQuestion);
+  usedIds=new Set(pool.map(p=>p.id));
+  studentAnswers=new Array(shuffledQs.length).fill(null);
+  annulled=new Array(shuffledQs.length).fill(false);
+  currentQIndex=0;tabChangeCount=0;
+
+  document.getElementById('student-pick').classList.add('hidden');
+  document.getElementById('student-exam').classList.remove('hidden');
+  document.getElementById('student-result').classList.add('hidden');
+  document.getElementById('exam-title-display').textContent=examConfig.titulo;
+  document.getElementById('sib-nombre').textContent=name;
+  document.getElementById('sib-doc').textContent=doc;
+  document.getElementById('sib-programa').textContent=prog;
+  document.getElementById('tab-counter').textContent='';
+  timeLeft=examConfig.tiempo_min*60;
+  updateTimer();
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{timeLeft--;updateTimer();if(timeLeft<=0){clearInterval(timerInterval);submitExam();}},1000);
+  document.removeEventListener('visibilitychange',onTabChange);
+  document.addEventListener('visibilitychange',onTabChange);
+  renderQuestion();renderNavDots();
+}
+
+function updateTimer(){
+  const m=Math.floor(timeLeft/60),s=timeLeft%60;
+  document.getElementById('timer-display').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const box=document.getElementById('timer-box');
+  box.className='timer-box';
+  if(timeLeft<=60)box.classList.add('danger');
+  else if(timeLeft<=300)box.classList.add('warning');
+}
+
+// ===== DETECCIÓN DE CAMBIO DE PESTAÑA =====
+function onTabChange(){
+  if(document.hidden)return;
+  if(!examConfig||document.getElementById('student-exam').classList.contains('hidden'))return;
+  tabChangeCount++;
+  document.getElementById('tab-counter').textContent=`⚠ ${tabChangeCount} cambio(s) de pestaña`;
+  const al=document.getElementById('tab-alert');al.classList.add('show');
+  if(tabAlertTimeout)clearTimeout(tabAlertTimeout);
+  tabAlertTimeout=setTimeout(()=>al.classList.remove('show'),4000);
+  refreshCurrentQuestion();
+}
+
+// Al cambiar de pestaña: la pregunta actual queda ANULADA (cuenta como incorrecta
+// sin importar lo que se responda después), y se reemplaza por otra del mismo
+// tema que no se haya usado aún; si no hay disponible, solo rebaraja las opciones.
+function refreshCurrentQuestion(){
+  saveCurrentAnswer();
+  annulled[currentQIndex]=true;
+  const current=shuffledQs[currentQIndex];
+  const temaId=current.tema_id;
+  const candidatos=(bancoCompleto[temaId]||[]).filter(p=>!usedIds.has(p.id));
+  if(candidatos.length>0){
+    const elegido=shuffle(candidatos)[0];
+    usedIds.delete(current.id);
+    usedIds.add(elegido.id);
+    shuffledQs[currentQIndex]=prepareQuestion(elegido);
+  } else if(current.tipo==='mc'||current.tipo==='vf'){
+    const sh=shuffle(current.shuffledOpts);
+    current.shuffledOpts=sh;current.shuffledCorrect=sh.findIndex(o=>o.isCorrect);
+  }
+  studentAnswers[currentQIndex]=null;
+  const dot=document.querySelectorAll('.q-dot')[currentQIndex];
+  if(dot){dot.classList.remove('answered');dot.classList.add('shuffled');}
+  renderQuestion();
+}
+
+function renderNavDots(){
+  const c=document.getElementById('q-nav-dots');c.innerHTML='';
+  shuffledQs.forEach((_,i)=>{
+    const dot=document.createElement('div');
+    let cls='q-dot'+(i===currentQIndex?' current':'');
+    if(annulled[i])cls+=' shuffled';
+    else if(studentAnswers[i]!==null)cls+=' answered';
+    dot.className=cls;
+    dot.textContent=i+1;
+    dot.onclick=()=>{saveCurrentAnswer();currentQIndex=i;renderQuestion();renderNavDots();};
+    c.appendChild(dot);
+  });
+}
+
+function renderQuestion(){
+  const q=shuffledQs[currentQIndex];const total=shuffledQs.length;
+  document.getElementById('q-progress').textContent=`Pregunta ${currentQIndex+1} de ${total}`;
+  document.getElementById('progress-bar').style.width=`${Math.round((currentQIndex/total)*100)}%`;
+  const area=document.getElementById('question-area');
+  const tipos={mc:'Opción múltiple',vf:'V/F',open:'Respuesta abierta',complete:'Completar'};
+  const colores={mc:'#e3f2fd;color:#0d47a1',vf:'#e8f5e9;color:#1b5e20',open:'#fff8e1;color:#e65100',complete:'#f3e5f5;color:#4a148c'};
+  let html=`<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;background:${colores[q.tipo]||'#eee;color:#333'};margin-bottom:10px">${tipos[q.tipo]||q.tipo}</span>`;
+  html+=`<div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:600">PREGUNTA ${currentQIndex+1} / ${total}</div>`;
+  html+=`<div class="q-text">${q.text}</div>`;
+  if(q.tipo==='mc'||q.tipo==='vf'){
+    html+=`<div class="opt-list" id="opt-list">`;
+    (q.shuffledOpts||[]).forEach((o,i)=>{
+      const sel=studentAnswers[currentQIndex]===i?' selected':'';
+      html+=`<div class="opt${sel}" onclick="selectOpt(${i})">${o.text}</div>`;
+    });
+    html+=`</div>`;
+  }else if(q.tipo==='open'){
+    const val=studentAnswers[currentQIndex]||'';
+    html+=`<textarea id="open-resp" style="width:100%;min-height:100px" placeholder="Escribe tu respuesta aquí...">${val}</textarea>`;
+  }else if(q.tipo==='complete'){
+    const display=q.text.replace(/___/g,'<u style="padding:0 24px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>');
+    html=`<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#f3e5f5;color:#4a148c;margin-bottom:10px">Completar</span>`;
+    html+=`<div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:600">PREGUNTA ${currentQIndex+1} / ${total}</div>`;
+    html+=`<div class="q-text">${display}</div>`;
+    const val=studentAnswers[currentQIndex]||'';
+    html+=`<label style="font-size:12px;color:#888">Tu respuesta:</label><input type="text" id="complete-resp" value="${val}" placeholder="Escribe la palabra o frase...">`;
+  }
+  html+=`<div class="nav-row">`;
+  if(currentQIndex>0)html+=`<button class="btn" onclick="navQ(-1)">&#8592; Anterior</button>`;else html+=`<div></div>`;
+  if(currentQIndex<shuffledQs.length-1)html+=`<button class="btn btn-primary" onclick="navQ(1)">Siguiente &#8594;</button>`;
+  else html+=`<button class="btn btn-primary" onclick="showFinishModal()">&#10003; Finalizar examen</button>`;
+  html+=`</div>`;
+  area.innerHTML=html;
+}
+
+function selectOpt(i){
+  studentAnswers[currentQIndex]=i;
+  document.querySelectorAll('#opt-list .opt').forEach((o,idx)=>o.classList.toggle('selected',idx===i));
+  renderNavDots();
+}
+function navQ(dir){saveCurrentAnswer();currentQIndex+=dir;renderQuestion();renderNavDots();}
+function saveCurrentAnswer(){
+  const q=shuffledQs[currentQIndex];
+  if(q.tipo==='open'){const t=document.getElementById('open-resp');if(t)studentAnswers[currentQIndex]=t.value;}
+  else if(q.tipo==='complete'){const t=document.getElementById('complete-resp');if(t)studentAnswers[currentQIndex]=t.value;}
+}
+function showFinishModal(){
+  saveCurrentAnswer();
+  const u=studentAnswers.filter(a=>a===null||a==='').length;
+  document.getElementById('modal-unanswered').textContent=u;
+  document.getElementById('modal-finish').classList.remove('hidden');
+}
+function confirmSubmit(){document.getElementById('modal-finish').classList.add('hidden');submitExam();}
+
+async function submitExam(){
+  saveCurrentAnswer();clearInterval(timerInterval);
+  document.removeEventListener('visibilitychange',onTabChange);
+  const temaNombres={};
+  examConfig.config.forEach(c=>temaNombres[c.tema_id]=c.tema_nombre);
+  let correct=0,gradable=0;
+  const review=shuffledQs.map((q,i)=>{
+    let pass=false,auto=true,respuestaTexto=null,correctaTexto=null;
+    if(q.tipo==='mc'||q.tipo==='vf'){
+      gradable++;
+      pass=(!annulled[i])&&studentAnswers[i]===q.shuffledCorrect;
+      if(pass)correct++;
+      respuestaTexto=studentAnswers[i]!==null?(q.shuffledOpts[studentAnswers[i]]?.text||null):null;
+      correctaTexto=q.shuffledOpts[q.shuffledCorrect]?.text||null;
+    }else if(q.tipo==='complete'){
+      gradable++;
+      pass=(!annulled[i])&&(studentAnswers[i]||'').trim().toLowerCase()===(q.answer||'').trim().toLowerCase();
+      if(pass)correct++;
+      respuestaTexto=studentAnswers[i]||null;
+      correctaTexto=q.answer||null;
+    }else{
+      auto=false;
+      respuestaTexto=studentAnswers[i]||null;
+      correctaTexto=q.answer||null;
+    }
+    return{q,answer:studentAnswers[i],pass,auto,respuestaTexto,correctaTexto,anulada:annulled[i]};
+  });
+  const pct=gradable>0?Math.round((correct/gradable)*100):100;
+  const passed=pct>=examConfig.puntaje_min;
+  await db.from('resultados').insert({
+    examen_id:examConfig.id,
+    nombre_aprendiz:currentStudentData.nombre,
+    puntaje:pct,
+    respuestas:review.map(r=>({
+      tema:temaNombres[r.q.tema_id]||'',
+      tipo:r.q.tipo,
+      pregunta:r.q.text,
+      respuesta_dada:r.respuestaTexto,
+      respuesta_correcta:r.correctaTexto,
+      correcto:r.pass,
+      auto:r.auto,
+      anulada:r.anulada
+    })),
+    cambios_pestana:tabChangeCount,
+    documento:currentStudentData.documento,
+    programa:currentStudentData.programa
+  });
+  document.getElementById('student-exam').classList.add('hidden');
+  document.getElementById('student-result').classList.remove('hidden');
+  document.getElementById('result-score').textContent=`${pct}%`;
+  document.getElementById('result-score').style.color=passed?'#39a900':'#e53935';
+  document.getElementById('result-label').textContent=passed?'¡Aprobado! ✓':'No aprobado';
+  document.getElementById('result-detail').textContent=`${correct} de ${gradable} respuestas correctas — ${tabChangeCount} cambio(s) de pestaña`;
+  document.getElementById('result-student-info').innerHTML=`<b>Aprendiz:</b> ${currentStudentData.nombre} &nbsp;|&nbsp; <b>Documento:</b> ${currentStudentData.documento} &nbsp;|&nbsp; <b>Programa:</b> ${currentStudentData.programa}`;
+  const rev=document.getElementById('result-review');
+  rev.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:10px;text-align:left">Revisión de respuestas</div>';
+  review.forEach((r,i)=>{
+    const icon=r.auto?(r.pass?'<span style="color:#39a900;font-weight:700">✓</span>':'<span style="color:#e53935;font-weight:700">✗</span>'):'<span style="color:#f57c00;font-weight:700">?</span>';
+    let note=r.auto?'':(r.q.tipo==='open'?'(revisión manual pendiente)':'');
+    if(r.anulada)note='(anulada por cambio de pestaña)';
+    rev.innerHTML+=`<div class="review-item">${icon}<div><b>P${i+1}:</b> ${r.q.text.substring(0,70)}${r.q.text.length>70?'...':''} <span style="color:#aaa;font-style:italic">${note}</span></div></div>`;
+  });
+}
+</script>
+</body>
+</html>
